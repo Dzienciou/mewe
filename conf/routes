@@ -1,0 +1,9 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# https://www.playframework.com/documentation/latest/ScalaRouting
+# ~~~~
+
+# An example controller showing a sample home page
+GET     /                           controllers.PostController.index
+GET     /:id                           controllers.PostController.addUserToGroup(id: Long)
+GET     /groups/:id                           controllers.PostController.getUserGroups(id: Long)
