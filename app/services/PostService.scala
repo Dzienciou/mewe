@@ -16,7 +16,7 @@ class PostService @Inject()(postDao: PostDao)(implicit val ec: ExecutionContext)
   def addPost(content: String, groupId: Long, userId: Long) =
     postDao.addPost(content: String, groupId: Long, userId: Long)
 
-  def getPosts() = postDao.getPosts(0)
+  def getPosts() = postDao.getPosts(4)
 
   def addUserToGroup(userId: Long, groupId: Long) = {
     postDao.addUserToGroup(userId, groupId)

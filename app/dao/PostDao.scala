@@ -4,17 +4,17 @@ import java.time.Instant
 import java.util.Date
 
 import javax.inject._
-import models.{Post, User}
+import models.{Post, RawPost, User}
 import play.api.libs.json._
 import play.api.mvc.{AbstractController, ControllerComponents}
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
+import reactivemongo.api.Cursor
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONDocumentWriter, Macros}
 import reactivemongo.play.json._
 import reactivemongo.play.json.collection._
 import utils.JsonUtils._
-
 import scala.concurrent.{ExecutionContext, Future}
 
 class PostDao @Inject() (
@@ -27,7 +27,7 @@ class PostDao @Inject() (
 
   def addPost(content: String, groupId: Long, userId: Long) = {
     val collection = database.map(_.collection[JSONCollection](groupCollectionName(groupId)))
-    collection.foreach(_.indexesManager.create(Index(Seq("crerated" -> IndexType.Descending))))
+    collection.foreach(_.indexesManager.create(Index(Seq("created" -> IndexType.Descending))))
       collection.flatMap(
       _.insert(
         Json.obj(
@@ -40,10 +40,11 @@ class PostDao @Inject() (
     )
   }
 
-  def getPosts(groupId: Long): Future[JSONCollection] =
+  def getPosts(groupId: Long) =
     database.map(_.collection[JSONCollection](groupCollectionName(groupId))).flatMap(
-      _.find(Json.obj()).sort(Json.obj("created" -> -1)).cursor[RawPost]
-    )
+      _.find(Json.obj()).sort(Json.obj("created" -> -1)).cursor[JsValue]()
+        .collect[Seq](-1, Cursor.FailOnError[Seq[JsValue]]()
+    ))
 
   def addUserToGroup(userId: Long, groupId: Long) = {
     val collection = database.map(_.collection[BSONCollection]("groups"))
