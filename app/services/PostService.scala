@@ -11,8 +11,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class PostService @Inject()(postDao: PostDao)(implicit val ec: ExecutionContext) {
-  def getPosts() = postDao.getPosts()
 
+
+  def addPost(content: String, groupId: Long, userId: Long) =
+    postDao.addPost(content: String, groupId: Long, userId: Long)
+
+  def getPosts() = postDao.getPosts(0)
 
   def addUserToGroup(userId: Long, groupId: Long) = {
     postDao.addUserToGroup(userId, groupId)

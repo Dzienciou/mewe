@@ -1,30 +1,58 @@
 package controllers
 
 import javax.inject._
-import play.api.libs.json.Json
+import models.Post
+import cats.implicits._
+import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc._
 import services.PostService
 import utils.JsonUtils._
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 @Singleton
 class PostController @Inject()(postService: PostService, cc: ControllerComponents)(implicit val ec: ExecutionContext) extends AbstractController(cc) {
-
 
   def index() = Action.async { implicit request =>
     postService.getPosts().map(c =>
       Ok(Json.toJson(c.toString)))
   }
-  def addUserToGroup(id: Long) = Action.async { implicit request =>
-    postService.addUserToGroup(2, id).map(c =>
-      Ok(Json.toJson(c.toString)))
+
+  def addUserToGroup(id: Long) = Action.async(parse.tolerantJson) { implicit request =>
+    parseToken(request)
+      .map { token =>
+        postService.addUserToGroup(token, id).transformWith {
+          case Success(_) => Future(Ok)
+          case Failure(ex) => Future(InternalServerError(ex.getMessage))
+        }
+      } getOrElse Future(BadRequest)
   }
 
-  def getUserGroups(id: Long) = Action.async { implicit request =>
-  postService.getUserGroups(id).map(c =>
-    Ok(Json.toJson(c.toString)))
+  def getUserGroups() = Action.async(parse.tolerantJson) { implicit request =>
+    parseToken(request)
+      .map ( token =>
+        postService.getUserGroups(token).map{
+          case Some(v) => Ok(Json.obj("groups" -> Json.toJson(v)))
+          case None => Ok(Json.obj("groups" -> Json.arr()))
+        }
+        ) getOrElse Future(BadRequest)
   }
+
+  def addPost(groupId: Long) = Action.async(parse.tolerantJson) { implicit request: Request[JsValue] =>
+    ((request.body \ "content" ).asOpt[String], parseToken(request)).mapN( (content, userId) =>
+        postService.addPost(content, groupId, userId).transformWith {
+          case Success(_) => Future(Ok)
+          case Failure(ex) => Future(InternalServerError(ex.getMessage))
+        }
+
+    ) getOrElse Future(BadRequest)
+  }
+
+  def parseToken(req: Request[JsValue]) =
+    req.headers
+      .get("Auth-Token")
+      .flatMap(_.toLongOption)
 
 
 }

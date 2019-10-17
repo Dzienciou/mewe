@@ -1,9 +1,10 @@
 package utils
 
-import models.{Post, User}
-import play.api.libs.json.{Format, Json}
+import models.{Post, RawPost, User}
+import play.api.libs.json.{Json, OFormat}
 
 object JsonUtils {
-  implicit val userFmt: Format[User] = Json.format[User]
-  implicit val postFmt: Format[Post] = Json.format[Post]
+  implicit val userFmt: OFormat[User] = Json.format[User]
+  implicit val postFmt: OFormat[Post] = Json.format[Post]
+  implicit val rawPostFmt: OFormat[RawPost] = Json.format[RawPost]
 }

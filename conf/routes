@@ -5,5 +5,10 @@
 
 # An example controller showing a sample home page
 GET     /                           controllers.PostController.index
-GET     /:id                           controllers.PostController.addUserToGroup(id: Long)
-GET     /groups/:id                           controllers.PostController.getUserGroups(id: Long)
+GET     /groups/list                           controllers.PostController.getUserGroups()
+
+GET     /groups/:id/join                           controllers.PostController.addUserToGroup(id: Long)
+
+POST    /groups/:id/add-post         controllers.PostController.addPost(id: Long)
+
+

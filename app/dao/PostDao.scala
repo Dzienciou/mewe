@@ -1,14 +1,19 @@
 package dao
 
+import java.time.Instant
+import java.util.Date
+
 import javax.inject._
-import models.User
+import models.{Post, User}
 import play.api.libs.json._
 import play.api.mvc.{AbstractController, ControllerComponents}
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
 import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.bson.BSONDocument
+import reactivemongo.api.indexes.{Index, IndexType}
+import reactivemongo.bson.{BSONDocument, BSONDocumentWriter, Macros}
 import reactivemongo.play.json._
 import reactivemongo.play.json.collection._
+import utils.JsonUtils._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -20,13 +25,28 @@ class PostDao @Inject() (
 
   implicit def ec: ExecutionContext = components.executionContext
 
-  def getPosts(): Future[JSONCollection] =
-    database.map(_.collection[JSONCollection]("group1"))
+  def addPost(content: String, groupId: Long, userId: Long) = {
+    val collection = database.map(_.collection[JSONCollection](groupCollectionName(groupId)))
+    collection.foreach(_.indexesManager.create(Index(Seq("crerated" -> IndexType.Descending))))
+      collection.flatMap(
+      _.insert(
+        Json.obj(
+          "content" -> content,
+          "groupId" -> groupId,
+          "userId" -> userId,
+          "created" -> Instant.now().toEpochMilli
+        )
+      )
+    )
+  }
+
+  def getPosts(groupId: Long): Future[JSONCollection] =
+    database.map(_.collection[JSONCollection](groupCollectionName(groupId))).flatMap(
+      _.find(Json.obj()).sort(Json.obj("created" -> -1)).cursor[RawPost]
+    )
 
   def addUserToGroup(userId: Long, groupId: Long) = {
     val collection = database.map(_.collection[BSONCollection]("groups"))
-    val selector = BSONDocument("userId" -> userId)
-    val mod = BSONDocument("$set" -> BSONDocument("groups" -> groupId))
     collection.flatMap(_.findAndUpdate(
       BSONDocument("userId" -> userId),
       BSONDocument("$addToSet" -> BSONDocument("groups" -> groupId)),
@@ -41,4 +61,7 @@ class PostDao @Inject() (
       Json.obj("groups" -> 1)
     ).one[JsObject]).map(_.flatMap(js => (js \ "groups").asOpt[List[Long]]))
   }
+
+  def groupCollectionName(groupId: Long) = s"group${groupId}"
+
 }
