@@ -17,35 +17,44 @@ import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class PostService @Inject()(postDao: PostDao)(implicit val ec: ExecutionContext, implicit val system : ActorSystem) {
+class PostService @Inject()(postDao: PostDao)(implicit val ec: ExecutionContext, implicit val system: ActorSystem) {
 
   implicit val mat: Materializer = ActorMaterializer()
-  implicit val orderingPosts: Ordering[RawPost] = (x: RawPost, y: RawPost) => if (y == x) 0 else
-  if (y.created > x.created) 1 else -1
+  implicit val orderingPosts: Ordering[RawPost] = (x: RawPost, y: RawPost) =>
+    if (y == x) 0 else if (y.created > x.created) 1 else -1
 
   def addPost(content: String, groupId: Long, userId: Long) = {
-    postDao.getUserGroups(userId).flatMap( userGroups =>
-      if ( userGroups.contains(groupId))
-        postDao.addPost(content: String, groupId: Long, userId: Long).map(Some(_))
-      else
-        Future(None)
-    )
+    postDao
+      .getUserGroups(userId)
+      .flatMap(
+        userGroups =>
+          if (userGroups.contains(groupId))
+            postDao.addPost(content: String, groupId: Long, userId: Long).map(Some(_))
+          else
+            Future(None)
+      )
 
   }
 
   def getPosts(groupId: Long, userId: Long) = {
-    postDao.getUserGroups(userId).flatMap( userGroups =>
-      if ( userGroups.contains(groupId))
-        postDao.getPosts(groupId).flatMap(_.runWith(Sink.seq))
-          .flatMap(fromRawSeq)
-          .map(Some(_))
-      else
-        Future(None)
-    )
-   }
+    postDao
+      .getUserGroups(userId)
+      .flatMap(
+        userGroups =>
+          if (userGroups.contains(groupId))
+            postDao
+              .getPosts(groupId)
+              .flatMap(_.runWith(Sink.seq))
+              .flatMap(fromRawSeq)
+              .map(Some(_))
+          else
+            Future(None)
+      )
+  }
 
   def getAllPosts(userId: Long) = {
-    postDao.getAllPostsAsSources(userId)
+    postDao
+      .getAllPostsAsSources(userId)
       .map(sources => Merge.mergeSortedN(sources))
   }
 
@@ -59,10 +68,10 @@ class PostService @Inject()(postDao: PostDao)(implicit val ec: ExecutionContext,
 
   def getUserInfo(userId: Long) = postDao.getUserInfo(userId)
 
-
-  def fromRaw(raw: RawPost):Future[Post] =
-    postDao.getUserInfo(raw.userId)
-    .map(Post(raw.id, new Instant(raw.created), raw.content, raw.groupId, _ ))
+  def fromRaw(raw: RawPost): Future[Post] =
+    postDao
+      .getUserInfo(raw.userId)
+      .map(Post(raw.id, Instant.ofEpochMilli(raw.created), raw.content, raw.groupId, _))
 
   def fromRawSeq(raws: Seq[RawPost]): Future[Seq[Post]] = Future.sequence(raws.map(fromRaw))
 }

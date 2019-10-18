@@ -11,8 +11,10 @@ GET     /groups/list                           controllers.PostController.getUse
 GET     /groups/:id/get-posts                  controllers.PostController.getPosts(id: Long)
 
 
-POST     /groups/:id/join                       controllers.PostController.addUserToGroup(id: Long)
+POST     /groups/:id/join                      controllers.PostController.addUserToGroup(id: Long)
 
-POST     /groups/:id/add-post                   controllers.PostController.addPost(id: Long)
+POST     /groups/:id/add-post                  controllers.PostController.addPost(id: Long)
+
+POST      /users/set-name                       controllers.PostController.addUsername()
 
 

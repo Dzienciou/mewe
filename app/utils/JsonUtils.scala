@@ -6,8 +6,7 @@ import play.api.libs.json.{JsPath, Json, OFormat, Reads, Writes}
 
 object JsonUtils {
   implicit val userFmt: OFormat[UserInfo] = Json.format[UserInfo]
-  implicit val postFmt: OFormat[Post] = Json.format[Post]
-
+  implicit val postFmt: OFormat[Post]     = Json.format[Post]
 
   implicit val rawPostWrites: Writes[RawPost] = Json.writes[RawPost]
   implicit val rawPostReads: Reads[RawPost] = (
@@ -16,5 +15,5 @@ object JsonUtils {
       (JsPath \ "content").read[String] and
       (JsPath \ "groupId").read[Long] and
       (JsPath \ "userId").read[Long]
-    )(RawPost.apply _)
+  )(RawPost.apply _)
 }
