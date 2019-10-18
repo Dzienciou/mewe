@@ -48,7 +48,7 @@ class PostDao @Inject()(
   }
 
   def getAllPostsAsSources(userId: Long) =
-    getUserGroups(userId).flatMap(groups => { println(groups); Future.sequence(groups.map(getPosts)) })
+    getUserGroups(userId).flatMap(groups => Future.sequence(groups.map(getPosts)))
 
   def getPosts(groupId: Long) =
     database
