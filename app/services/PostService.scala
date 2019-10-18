@@ -1,22 +1,48 @@
 package services
 
 import javax.inject._
-import java.time.Instant
-
-import akka.stream.scaladsl.Source
 import dao.PostDao
-import models.{Post, User}
+import akka.NotUsed
+import akka.actor.ActorSystem
+import akka.stream._
+import akka.stream.scaladsl.{Flow, Sink, Source}
+import models.{Post, RawPost}
+import play.api.libs.json.{JsValue, Json}
+import utils.MergeSortedN
+import utils.JsonUtils._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.collection.immutable
+import scala.concurrent.ExecutionContext
 
 @Singleton
-class PostService @Inject()(postDao: PostDao)(implicit val ec: ExecutionContext) {
+class PostService @Inject()(postDao: PostDao)(implicit val ec: ExecutionContext, implicit val system : ActorSystem) {
+  implicit val mat: Materializer = ActorMaterializer()
 
+  implicit val orderingPosts: Ordering[RawPost] = (x: RawPost, y: RawPost) => if (y.created > x.created) -1 else 1
+
+  def mergeSortedN[T: Ordering](sources: immutable.Seq[Source[T, _]]): Source[T, NotUsed] = {
+    val source = sources match {
+      case immutable.Seq()   => Source.empty[T]
+      case immutable.Seq(s1: Source[T, _]) => s1.mapMaterializedValue(_ => NotUsed)
+      case s1 +: s2 +: ss   => Source.combine(s1, s2, ss: _*)(new MergeSortedN[T](_))
+    }
+    source
+  }
 
   def addPost(content: String, groupId: Long, userId: Long) =
     postDao.addPost(content: String, groupId: Long, userId: Long)
 
-  def getPosts() = postDao.getPosts(4)
+  def getPosts(groupId: Long) = {
+    postDao.getPosts(groupId).flatMap(_.
+      via(Flow.fromFunction(_.asOpt[RawPost]))
+      .runWith(Sink.seq))
+  }
+
+  def getAllPosts(userId: Long) = {
+    postDao.getAllPostsAsSources(userId)
+      .map(sources => mergeSortedN(sources)(orderingPosts))
+
+  }
 
   def addUserToGroup(userId: Long, groupId: Long) = {
     postDao.addUserToGroup(userId, groupId)

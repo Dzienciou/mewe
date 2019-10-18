@@ -14,9 +14,9 @@ import scala.util.{Failure, Success}
 @Singleton
 class PostController @Inject()(postService: PostService, cc: ControllerComponents)(implicit val ec: ExecutionContext) extends AbstractController(cc) {
 
-  def index() = Action.async { implicit request =>
-    postService.getPosts().map(c =>
-      Ok(Json.toJson(c.toString)))
+  def getPosts(groupId: Long) = Action.async { implicit request =>
+    postService.getPosts(groupId).map(c =>
+      Ok(Json.toJson(c)))
   }
 
   def addUserToGroup(id: Long) = Action.async(parse.tolerantJson) { implicit request =>
@@ -32,10 +32,8 @@ class PostController @Inject()(postService: PostService, cc: ControllerComponent
   def getUserGroups() = Action.async(parse.tolerantJson) { implicit request =>
     parseToken(request)
       .map ( token =>
-        postService.getUserGroups(token).map{
-          case Some(v) => Ok(Json.obj("groups" -> Json.toJson(v)))
-          case None => Ok(Json.obj("groups" -> Json.arr()))
-        }
+        postService.getUserGroups(token).map(groups =>
+          Ok(Json.obj("groups" -> Json.toJson(groups))))
         ) getOrElse Future(BadRequest)
   }
 

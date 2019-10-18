@@ -3,6 +3,8 @@ package dao
 import java.time.Instant
 import java.util.Date
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import javax.inject._
 import models.{Post, RawPost, User}
 import play.api.libs.json._
@@ -14,16 +16,20 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONDocument, BSONDocumentWriter, Macros}
 import reactivemongo.play.json._
 import reactivemongo.play.json.collection._
-import utils.JsonUtils._
+import reactivemongo.akkastream.{State, cursorProducer}
+
 import scala.concurrent.{ExecutionContext, Future}
 
 class PostDao @Inject() (
                          components: ControllerComponents,
+                         system: ActorSystem,
                          val reactiveMongoApi: ReactiveMongoApi,
-                       ) extends AbstractController(components)
+                       )
+  extends AbstractController(components)
   with MongoController with ReactiveMongoComponents {
 
   implicit def ec: ExecutionContext = components.executionContext
+  implicit val materializer: ActorMaterializer = ActorMaterializer()(system)
 
   def addPost(content: String, groupId: Long, userId: Long) = {
     val collection = database.map(_.collection[JSONCollection](groupCollectionName(groupId)))
@@ -40,11 +46,13 @@ class PostDao @Inject() (
     )
   }
 
+  def getAllPostsAsSources(userId: Long) =
+    getUserGroups(userId).flatMap(groups => Future.sequence(groups.map(getPosts)))
+
+
   def getPosts(groupId: Long) =
-    database.map(_.collection[JSONCollection](groupCollectionName(groupId))).flatMap(
-      _.find(Json.obj()).sort(Json.obj("created" -> -1)).cursor[JsValue]()
-        .collect[Seq](-1, Cursor.FailOnError[Seq[JsValue]]()
-    ))
+    database.map(_.collection[JSONCollection](groupCollectionName(groupId))).map(
+      _.find(Json.obj()).sort(Json.obj("created" -> -1)).cursor[JsValue]().documentSource())
 
   def addUserToGroup(userId: Long, groupId: Long) = {
     val collection = database.map(_.collection[BSONCollection]("groups"))
@@ -60,7 +68,7 @@ class PostDao @Inject() (
     collection.flatMap(_.find(
       Json.obj("userId" -> userId),
       Json.obj("groups" -> 1)
-    ).one[JsObject]).map(_.flatMap(js => (js \ "groups").asOpt[List[Long]]))
+    ).one[JsObject]).map(_.flatMap(js => (js \ "groups").asOpt[Seq[Long]]).getOrElse(Seq.empty))
   }
 
   def groupCollectionName(groupId: Long) = s"group${groupId}"

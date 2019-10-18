@@ -10,12 +10,15 @@ scalaVersion := "2.13.0"
 routesGenerator := InjectedRoutesGenerator
 
 libraryDependencies += guice
+
 libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "4.0.3" % Test
 libraryDependencies ++= Seq(
   "org.reactivemongo" %% "play2-reactivemongo" % "0.18.7-play27",
-  "org.reactivemongo" %% "reactivemongo-play-json" % "0.18.7-play27"
+  "org.reactivemongo" %% "reactivemongo-play-json" % "0.18.7-play27",
+  "org.reactivemongo" %% "reactivemongo-akkastream" % "0.18.7"
 )
 libraryDependencies += "org.typelevel" %% "cats-core" % "2.0.0"
+libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.5.25"
 
 
 
