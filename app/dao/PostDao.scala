@@ -17,6 +17,7 @@ import reactivemongo.bson.{BSONDocument, BSONDocumentWriter, Macros}
 import reactivemongo.play.json._
 import reactivemongo.play.json.collection._
 import reactivemongo.akkastream.{State, cursorProducer}
+import utils.JsonUtils._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -47,12 +48,12 @@ class PostDao @Inject() (
   }
 
   def getAllPostsAsSources(userId: Long) =
-    getUserGroups(userId).flatMap(groups => Future.sequence(groups.map(getPosts)))
+    getUserGroups(userId).flatMap(groups => {println(groups); Future.sequence(groups.map(getPosts))})
 
 
   def getPosts(groupId: Long) =
     database.map(_.collection[JSONCollection](groupCollectionName(groupId))).map(
-      _.find(Json.obj()).sort(Json.obj("created" -> -1)).cursor[JsValue]().documentSource())
+      _.find(Json.obj()).sort(Json.obj("created" -> -1)).cursor[RawPost]().documentSource())
 
   def addUserToGroup(userId: Long, groupId: Long) = {
     val collection = database.map(_.collection[BSONCollection]("groups"))

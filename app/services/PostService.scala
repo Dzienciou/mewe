@@ -18,7 +18,8 @@ import scala.concurrent.ExecutionContext
 class PostService @Inject()(postDao: PostDao)(implicit val ec: ExecutionContext, implicit val system : ActorSystem) {
   implicit val mat: Materializer = ActorMaterializer()
 
-  implicit val orderingPosts: Ordering[RawPost] = (x: RawPost, y: RawPost) => if (y.created > x.created) -1 else 1
+  implicit val orderingPosts: Ordering[RawPost] = (x: RawPost, y: RawPost) => if (y == x) 0 else
+  if (y.created > x.created) 1 else -1
 
   def mergeSortedN[T: Ordering](sources: immutable.Seq[Source[T, _]]): Source[T, NotUsed] = {
     val source = sources match {
@@ -33,15 +34,12 @@ class PostService @Inject()(postDao: PostDao)(implicit val ec: ExecutionContext,
     postDao.addPost(content: String, groupId: Long, userId: Long)
 
   def getPosts(groupId: Long) = {
-    postDao.getPosts(groupId).flatMap(_.
-      via(Flow.fromFunction(_.asOpt[RawPost]))
-      .runWith(Sink.seq))
+    postDao.getPosts(groupId).flatMap(_.runWith(Sink.seq))
   }
 
   def getAllPosts(userId: Long) = {
     postDao.getAllPostsAsSources(userId)
-      .map(sources => mergeSortedN(sources)(orderingPosts))
-
+      .map(sources => mergeSortedN(sources))
   }
 
   def addUserToGroup(userId: Long, groupId: Long) = {

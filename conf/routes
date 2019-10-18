@@ -4,8 +4,12 @@
 # ~~~~
 
 # An example controller showing a sample home page
+
+GET     /get-posts                             controllers.PostController.getAllUserPosts()
+
 GET     /groups/list                           controllers.PostController.getUserGroups()
 GET     /groups/:id/get-posts                  controllers.PostController.getPosts(id: Long)
+
 
 GET     /groups/:id/join                           controllers.PostController.addUserToGroup(id: Long)
 
