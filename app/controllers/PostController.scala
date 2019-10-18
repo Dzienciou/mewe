@@ -20,8 +20,11 @@ class PostController @Inject()(postService: PostService, system: ActorSystem, cc
   implicit val materializer: ActorMaterializer = ActorMaterializer()(system)
 
   def getPosts(groupId: Long) = Action.async { implicit request =>
-    postService.getPosts(groupId).map(c =>
-      Ok(Json.toJson(c)))
+    val token: Long = parseToken(request).getOrElse(0)
+    postService.getPosts(groupId, token).map {
+      case Some(posts) => Ok(Json.toJson(posts))
+      case None => BadRequest(s"User $token is not a member of a group $groupId")
+    }
   }
 
   def getAllUserPosts() = Action.async { implicit request =>
@@ -52,9 +55,9 @@ class PostController @Inject()(postService: PostService, system: ActorSystem, cc
 
   def addPost(groupId: Long) = Action.async(parse.tolerantJson) { implicit request: Request[JsValue] =>
     ((request.body \ "content" ).asOpt[String], parseToken(request)).mapN( (content, userId) =>
-        postService.addPost(content, groupId, userId).transformWith {
-          case Success(_) => Future(Ok)
-          case Failure(ex) => Future(InternalServerError(ex.getMessage))
+        postService.addPost(content, groupId, userId).map {
+          case Some(_) => Ok
+          case None => BadRequest(s"User $token is not a member of a group $groupId")
         }
 
     ) getOrElse Future(BadRequest)

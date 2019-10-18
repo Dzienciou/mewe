@@ -12,7 +12,7 @@ import utils.MergeSortedN
 import utils.JsonUtils._
 
 import scala.collection.immutable
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class PostService @Inject()(postDao: PostDao)(implicit val ec: ExecutionContext, implicit val system : ActorSystem) {
@@ -30,12 +30,25 @@ class PostService @Inject()(postDao: PostDao)(implicit val ec: ExecutionContext,
     source
   }
 
-  def addPost(content: String, groupId: Long, userId: Long) =
-    postDao.addPost(content: String, groupId: Long, userId: Long)
+  def addPost(content: String, groupId: Long, userId: Long) = {
+    postDao.getUserGroups(userId).flatMap( userGroups =>
+      if ( userGroups.contains(groupId))
+        postDao.addPost(content: String, groupId: Long, userId: Long).map(Some(_))
+      else
+        Future(None)
+    )
 
-  def getPosts(groupId: Long) = {
-    postDao.getPosts(groupId).flatMap(_.runWith(Sink.seq))
   }
+
+  def getPosts(groupId: Long, userId: Long) = {
+    postDao.getUserGroups(userId).flatMap( userGroups =>
+      if ( userGroups.contains(groupId))
+        postDao.getPosts(groupId).flatMap(_.runWith(Sink.seq)).map(Some(_))
+      else
+        Future(None)
+    )
+
+    }
 
   def getAllPosts(userId: Long) = {
     postDao.getAllPostsAsSources(userId)
