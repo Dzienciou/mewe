@@ -31,7 +31,8 @@ class PostController @Inject()(postService: PostService, system: ActorSystem, cc
     val token: Long = parseToken(request).getOrElse(0)
     postService.getAllPosts(token).flatMap( source =>
       source.runWith(Sink.seq[RawPost])
-        .map(seq => Ok(Json.toJson(seq)))
+      .flatMap(postService.fromRawSeq)
+      .map(seq => Ok(Json.toJson(seq)))
     )
   }
 
@@ -60,6 +61,12 @@ class PostController @Inject()(postService: PostService, system: ActorSystem, cc
           case None => BadRequest(s"User $token is not a member of a group $groupId")
         }
 
+    ) getOrElse Future(BadRequest)
+  }
+
+  def addUsername() = Action.async(parse.tolerantJson) { implicit request: Request[JsValue] =>
+    ((request.body \ "name" ).asOpt[String], parseToken(request)).mapN( (name, token) =>
+      postService.addUsername(token, name).map(_ => Ok)
     ) getOrElse Future(BadRequest)
   }
 

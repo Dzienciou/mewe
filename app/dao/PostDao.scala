@@ -6,7 +6,7 @@ import java.util.Date
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import javax.inject._
-import models.{Post, RawPost, User}
+import models.{Post, RawPost, UserInfo}
 import play.api.libs.json._
 import play.api.mvc.{AbstractController, ControllerComponents}
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
@@ -72,6 +72,20 @@ class PostDao @Inject() (
     ).one[JsObject]).map(_.flatMap(js => (js \ "groups").asOpt[Seq[Long]]).getOrElse(Seq.empty))
   }
 
-  def groupCollectionName(groupId: Long) = s"group${groupId}"
+  def addUsername(userId: Long, name: String) =
+    database.map(_.collection[JSONCollection]("users")).flatMap(
+      _.findAndUpdate(
+        Json.obj("_id"-> userId),
+        Json.obj("$set" -> Json.obj("name" -> name)),
+        upsert=true
+    ))
+
+  def getUserInfo(userId: Long) =
+    database.map(_.collection[JSONCollection]("users")).flatMap(
+      _.find(
+        Json.obj("_id"-> userId)).one[UserInfo])
+      .map(_.getOrElse(UserInfo(userId, s"defaultUsername$userId")))
+
+  def groupCollectionName(groupId: Long) = s"group$groupId"
 
 }
