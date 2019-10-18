@@ -14,7 +14,7 @@ Application keeps separate mongodb collection for every group. Every such collec
 To read user's feed I use `MergeSortedN` component, which extends `Graph` from Akka Streams, so getting many group feed is still in complexity `O(n*log(k))`, where n is max a number of posts in a group and k is a number of groups. Because according to my assumptions k is much smaller than n, the actual time of processing should be similar to group-feed processing time.
 Responses for post requests are sent in chunked form.
 
-##API
+## API
 You should attach a header with `Auth-Token`, containing an userId to your requests. You can find following endpoints:
 ```
 GET     /get-posts                            Lists all posts from all user's groups. The response is chunked.
@@ -29,7 +29,7 @@ POST     /groups/:id/add-post                 Add post to a group. request body 
 
 POST      /users/set-name                      sets username (not obligatory, if not set, user is given a default name)
 ```
-example request (curl):
+### example request (curl):
 ```
  curl -i --request POST -H 'Content-Type: application/json' --header 'Auth-Token: 100' \
 --data '{"content": "some content of a post"}' \
