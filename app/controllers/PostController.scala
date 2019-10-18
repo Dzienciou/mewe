@@ -54,8 +54,8 @@ class PostController @Inject()(postService: PostService, system: ActorSystem, cc
   }
 
   def addPost(groupId: Long) = Action.async(parse.tolerantJson) { implicit request: Request[JsValue] =>
-    ((request.body \ "content" ).asOpt[String], parseToken(request)).mapN( (content, userId) =>
-        postService.addPost(content, groupId, userId).map {
+    ((request.body \ "content" ).asOpt[String], parseToken(request)).mapN( (content, token) =>
+        postService.addPost(content, groupId, token).map {
           case Some(_) => Ok
           case None => BadRequest(s"User $token is not a member of a group $groupId")
         }

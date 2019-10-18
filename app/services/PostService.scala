@@ -8,7 +8,7 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import models.{Post, RawPost}
 import play.api.libs.json.{JsValue, Json}
-import utils.MergeSortedN
+import utils.{Merge, MergeSortedN}
 import utils.JsonUtils._
 
 import scala.collection.immutable
@@ -16,19 +16,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class PostService @Inject()(postDao: PostDao)(implicit val ec: ExecutionContext, implicit val system : ActorSystem) {
-  implicit val mat: Materializer = ActorMaterializer()
 
+  implicit val mat: Materializer = ActorMaterializer()
   implicit val orderingPosts: Ordering[RawPost] = (x: RawPost, y: RawPost) => if (y == x) 0 else
   if (y.created > x.created) 1 else -1
-
-  def mergeSortedN[T: Ordering](sources: immutable.Seq[Source[T, _]]): Source[T, NotUsed] = {
-    val source = sources match {
-      case immutable.Seq()   => Source.empty[T]
-      case immutable.Seq(s1: Source[T, _]) => s1.mapMaterializedValue(_ => NotUsed)
-      case s1 +: s2 +: ss   => Source.combine(s1, s2, ss: _*)(new MergeSortedN[T](_))
-    }
-    source
-  }
 
   def addPost(content: String, groupId: Long, userId: Long) = {
     postDao.getUserGroups(userId).flatMap( userGroups =>
@@ -52,7 +43,7 @@ class PostService @Inject()(postDao: PostDao)(implicit val ec: ExecutionContext,
 
   def getAllPosts(userId: Long) = {
     postDao.getAllPostsAsSources(userId)
-      .map(sources => mergeSortedN(sources))
+      .map(sources => Merge.mergeSortedN(sources))
   }
 
   def addUserToGroup(userId: Long, groupId: Long) = {

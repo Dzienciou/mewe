@@ -7,8 +7,20 @@ import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 
 import scala.collection.{immutable, mutable}
 
+// Strongly inspired by https://github.com/akka/akka/pull/25317/files
 
-final class MergeSortedN[T: Ordering](inputPorts: Int)
+object Merge {
+  def mergeSortedN[T: Ordering](sources: immutable.Seq[Source[T, _]]): Source[T, NotUsed] = {
+    sources match {
+      case immutable.Seq()   => Source.empty[T]
+      case immutable.Seq(s1: Source[T, _]) => s1.mapMaterializedValue(_ => NotUsed)
+      case s1 +: s2 +: ss   => Source.combine(s1, s2, ss: _*)(new MergeSortedN[T](_))
+    }
+  }
+}
+
+
+class MergeSortedN[T: Ordering](inputPorts: Int)
   extends GraphStage[UniformFanInShape[T, T]] {
   val inlets: immutable.IndexedSeq[Inlet[T]] = Vector.tabulate(inputPorts)(i => Inlet[T]("MergeSortedN.in" + i))
   val out: Outlet[T] = Outlet[T]("MergeSortedN.out")
