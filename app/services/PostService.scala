@@ -44,8 +44,6 @@ class PostService @Inject()(postDao: PostDao)(implicit val ec: ExecutionContext,
           if (userGroups.contains(groupId))
             postDao
               .getPosts(groupId)
-              .flatMap(_.runWith(Sink.seq))
-              .flatMap(fromRawSeq)
               .map(Some(_))
           else
             Future(None)

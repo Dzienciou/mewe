@@ -26,7 +26,11 @@ class PostController @Inject()(postService: PostService, system: ActorSystem, cc
   def getPosts(groupId: Long) = Action.async { implicit request =>
     val token: Long = parseToken(request).getOrElse(0)
     postService.getPosts(groupId, token).map {
-      case Some(posts) => Ok(Json.toJson(posts))
+      case Some(source) =>
+        Ok.chunked(source
+          .mapAsync(10)(postService.fromRaw)
+          .via(Flow.fromFunction(Json.toJson(_)))
+      )
       case None        => BadRequest(s"User $token is not a member of a group $groupId")
     }
   }
