@@ -2,10 +2,12 @@ package controllers
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import javax.inject._
 import models.{Post, RawPost}
 import cats.implicits._
+import play.api.http.ContentTypes
+import play.api.libs.{Comet, EventSource}
 import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
 import play.api.mvc._
 import services.PostService
@@ -33,12 +35,13 @@ class PostController @Inject()(postService: PostService, system: ActorSystem, cc
     val token: Long = parseToken(request).getOrElse(0)
     postService
       .getAllPosts(token)
-      .flatMap(
+      .map(
         source =>
-          source
-            .runWith(Sink.seq[RawPost])
-            .flatMap(postService.fromRawSeq)
-            .map(seq => Ok(Json.toJson(seq)))
+          Ok.chunked(
+              source
+                .mapAsync(10)(postService.fromRaw)
+                  .via(Flow.fromFunction(Json.toJson(_)))
+          )
       )
   }
 
