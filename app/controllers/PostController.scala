@@ -2,13 +2,10 @@ package controllers
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.Flow
 import javax.inject._
-import models.{Post, RawPost}
 import cats.implicits._
-import play.api.http.ContentTypes
-import play.api.libs.{Comet, EventSource}
-import play.api.libs.json.{JsError, JsSuccess, JsValue, Json}
+import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 import services.PostService
 import utils.JsonUtils._
@@ -27,11 +24,12 @@ class PostController @Inject()(postService: PostService, system: ActorSystem, cc
     val token: Long = parseToken(request).getOrElse(0)
     postService.getPosts(groupId, token).map {
       case Some(source) =>
-        Ok.chunked(source
-          .mapAsync(10)(postService.fromRaw)
-          .via(Flow.fromFunction(Json.toJson(_)))
-      )
-      case None        => BadRequest(s"User $token is not a member of a group $groupId")
+        Ok.chunked(
+          source
+            .mapAsync(10)(postService.fromRaw)
+            .via(Flow.fromFunction(Json.toJson(_)))
+        )
+      case None => BadRequest(s"User $token is not a member of a group $groupId")
     }
   }
 
@@ -42,9 +40,9 @@ class PostController @Inject()(postService: PostService, system: ActorSystem, cc
       .map(
         source =>
           Ok.chunked(
-              source
-                .mapAsync(10)(postService.fromRaw)
-                  .via(Flow.fromFunction(Json.toJson(_)))
+            source
+              .mapAsync(10)(postService.fromRaw)
+              .via(Flow.fromFunction(Json.toJson(_)))
           )
       )
   }

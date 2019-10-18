@@ -4,16 +4,10 @@ import java.time.Instant
 
 import javax.inject._
 import dao.PostDao
-import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream._
-import akka.stream.scaladsl.{Flow, Sink, Source}
-import models.{Post, RawPost, UserInfo}
-import play.api.libs.json.{JsValue, Json}
-import utils.{Merge, MergeSortedN}
-import utils.JsonUtils._
-
-import scala.collection.immutable
+import models.{Post, RawPost}
+import utils.Merge
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton

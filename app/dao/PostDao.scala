@@ -1,7 +1,6 @@
 package dao
 
 import java.time.Instant
-import java.util.Date
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -10,10 +9,9 @@ import models.{Post, RawPost, UserInfo}
 import play.api.libs.json._
 import play.api.mvc.{AbstractController, ControllerComponents}
 import play.modules.reactivemongo.{MongoController, ReactiveMongoApi, ReactiveMongoComponents}
-import reactivemongo.api.Cursor
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.{BSONDocument, BSONDocumentWriter, Macros}
+import reactivemongo.bson.BSONDocument
 import reactivemongo.play.json._
 import reactivemongo.play.json.collection._
 import reactivemongo.akkastream.{State, cursorProducer}
